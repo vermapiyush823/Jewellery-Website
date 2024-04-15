@@ -5,16 +5,16 @@ const cors = require("cors");
 const path = require("path");
 
 // const auth = require("./routes/auth");
-// const cart = require("./routes/cart");
+const cart = require("./routes/cart");
 // const wishlist = require("./routes/wishlist");
 const product = require("./routes/product");
 // const review = require("./routes/review");
 // const paymentRoute = require("./routes/paymentRoute");
 // const forgotPassword = require("./routes/forgotPassword");
 // const AdminRoute = require("./routes/Admin/AdminAuth");
-// const dotenv = require("dotenv");
+const dotenv = require("dotenv");
 // const checkOrigin = require("./middleware/apiAuth");
-// dotenv.config();
+dotenv.config();
 
 connectToMongo();
 const port = 5000;
@@ -35,7 +35,7 @@ app.use(express.static(path.join(__dirname, "build")));
 
 app.use("/api/product", product);
 
-// app.use('/api/cart', cart)
+app.use("/api/cart", cart);
 
 // app.use('/api/wishlist', wishlist)
 
