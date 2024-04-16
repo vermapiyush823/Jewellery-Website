@@ -6,6 +6,7 @@
 "use strict";
 
 const util = require("util");
+const { WEBPACK_MODULE_TYPE_RUNTIME } = require("../ModuleTypeConstants");
 const ModuleDependency = require("../dependencies/ModuleDependency");
 const formatLocation = require("../formatLocation");
 const { LogType } = require("../logging/Logger");
@@ -1067,7 +1068,7 @@ const SIMPLE_EXTRACTORS = {
 
 								return childStatsChunkGroup;
 							})
-					  )
+						)
 					: undefined,
 				childAssets: children
 					? mapObject(children, groups => {
@@ -1081,7 +1082,7 @@ const SIMPLE_EXTRACTORS = {
 								}
 							}
 							return Array.from(set);
-					  })
+						})
 					: undefined
 			};
 			Object.assign(object, statsChunkGroup);
@@ -1378,8 +1379,8 @@ const SIMPLE_EXTRACTORS = {
 					chunk.runtime === undefined
 						? undefined
 						: typeof chunk.runtime === "string"
-						? [makePathsRelative(chunk.runtime)]
-						: Array.from(chunk.runtime.sort(), makePathsRelative),
+							? [makePathsRelative(chunk.runtime)]
+							: Array.from(chunk.runtime.sort(), makePathsRelative),
 				files: Array.from(chunk.files),
 				auxiliaryFiles: Array.from(chunk.auxiliaryFiles).sort(compareIds),
 				hash: chunk.renderedHash,
@@ -1632,8 +1633,8 @@ const getItemSize = item => {
 	return !item.children
 		? 1
 		: item.filteredChildren
-		? 2 + getTotalSize(item.children)
-		: 1 + getTotalSize(item.children);
+			? 2 + getTotalSize(item.children)
+			: 1 + getTotalSize(item.children);
 };
 
 const getTotalSize = children => {
@@ -1911,13 +1912,13 @@ const ASSETS_GROUPERS = {
 								[name]: !!key,
 								filteredChildren: assets.length,
 								...assetGroup(children, assets)
-						  }
+							}
 						: {
 								type: "assets by status",
 								[name]: !!key,
 								children,
 								...assetGroup(children, assets)
-						  };
+							};
 				}
 			});
 		};
@@ -2093,19 +2094,21 @@ const MODULES_GROUPERS = type => ({
 					if (!module.moduleType) return;
 					if (groupModulesByType) {
 						return [module.moduleType.split("/", 1)[0]];
-					} else if (module.moduleType === "runtime") {
-						return ["runtime"];
+					} else if (module.moduleType === WEBPACK_MODULE_TYPE_RUNTIME) {
+						return [WEBPACK_MODULE_TYPE_RUNTIME];
 					}
 				},
 				getOptions: key => {
-					const exclude = key === "runtime" && !options.runtimeModules;
+					const exclude =
+						key === WEBPACK_MODULE_TYPE_RUNTIME && !options.runtimeModules;
 					return {
 						groupChildren: !exclude,
 						force: exclude
 					};
 				},
 				createGroup: (key, children, modules) => {
-					const exclude = key === "runtime" && !options.runtimeModules;
+					const exclude =
+						key === WEBPACK_MODULE_TYPE_RUNTIME && !options.runtimeModules;
 					return {
 						type: `${key} modules`,
 						moduleType: key,
@@ -2166,8 +2169,8 @@ const MODULES_GROUPERS = type => ({
 						type: isDataUrl
 							? "modules by mime type"
 							: groupModulesByPath
-							? "modules by path"
-							: "modules by extension",
+								? "modules by path"
+								: "modules by extension",
 						name: isDataUrl ? key.slice(/* 'data:'.length */ 5) : key,
 						children,
 						...moduleGroup(children, modules)

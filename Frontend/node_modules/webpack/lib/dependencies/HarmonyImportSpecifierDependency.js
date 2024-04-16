@@ -9,6 +9,7 @@ const Dependency = require("../Dependency");
 const {
 	getDependencyUsedByExportsCondition
 } = require("../optimize/InnerGraph");
+const { getTrimmedIdsAndRange } = require("../util/chainedImports");
 const makeSerializable = require("../util/makeSerializable");
 const propertyAccess = require("../util/propertyAccess");
 const HarmonyImportDependency = require("./HarmonyImportDependency");
@@ -16,13 +17,18 @@ const HarmonyImportDependency = require("./HarmonyImportDependency");
 /** @typedef {import("webpack-sources").ReplaceSource} ReplaceSource */
 /** @typedef {import("../ChunkGraph")} ChunkGraph */
 /** @typedef {import("../Dependency").ExportsSpec} ExportsSpec */
+/** @typedef {import("../Dependency").GetConditionFn} GetConditionFn */
 /** @typedef {import("../Dependency").ReferencedExport} ReferencedExport */
 /** @typedef {import("../Dependency").UpdateHashContext} UpdateHashContext */
 /** @typedef {import("../DependencyTemplate").DependencyTemplateContext} DependencyTemplateContext */
+/** @typedef {import("../Module")} Module */
+/** @typedef {import("../Module").BuildMeta} BuildMeta */
 /** @typedef {import("../ModuleGraph")} ModuleGraph */
 /** @typedef {import("../ModuleGraphConnection")} ModuleGraphConnection */
 /** @typedef {import("../ModuleGraphConnection").ConnectionState} ConnectionState */
 /** @typedef {import("../WebpackError")} WebpackError */
+/** @typedef {import("../javascript/JavascriptParser").Attributes} Attributes */
+/** @typedef {import("../javascript/JavascriptParser").Range} Range */
 /** @typedef {import("../serialization/ObjectMiddleware").ObjectDeserializerContext} ObjectDeserializerContext */
 /** @typedef {import("../serialization/ObjectMiddleware").ObjectSerializerContext} ObjectSerializerContext */
 /** @typedef {import("../util/Hash")} Hash */
@@ -33,6 +39,16 @@ const idsSymbol = Symbol("HarmonyImportSpecifierDependency.ids");
 const { ExportPresenceModes } = HarmonyImportDependency;
 
 class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
+	/**
+	 * @param {TODO} request request
+	 * @param {number} sourceOrder source order
+	 * @param {string[]} ids ids
+	 * @param {string} name name
+	 * @param {Range} range range
+	 * @param {TODO} exportPresenceMode export presence mode
+	 * @param {Attributes=} attributes assertions
+	 * @param {Range[]=} idRanges ranges for members of ids; the two arrays are right-aligned
+	 */
 	constructor(
 		request,
 		sourceOrder,
@@ -40,21 +56,24 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 		name,
 		range,
 		exportPresenceMode,
-		assertions
+		attributes,
+		idRanges // TODO webpack 6 make this non-optional. It must always be set to properly trim ids.
 	) {
-		super(request, sourceOrder, assertions);
+		super(request, sourceOrder, attributes);
 		this.ids = ids;
 		this.name = name;
 		this.range = range;
+		this.idRanges = idRanges;
 		this.exportPresenceMode = exportPresenceMode;
+		/** @type {boolean | undefined} */
 		this.namespaceObjectAsContext = false;
 		this.call = undefined;
 		this.directImport = undefined;
 		this.shorthand = undefined;
 		this.asiSafe = undefined;
-		/** @type {Set<string> | boolean} */
+		/** @type {Set<string> | boolean | undefined} */
 		this.usedByExports = undefined;
-		/** @type {Set<string>} */
+		/** @type {Set<string> | undefined} */
 		this.referencedPropertiesInDestructuring = undefined;
 	}
 
@@ -99,7 +118,7 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 
 	/**
 	 * @param {ModuleGraph} moduleGraph module graph
-	 * @returns {null | false | function(ModuleGraphConnection, RuntimeSpec): ConnectionState} function to determine if the connection is active
+	 * @returns {null | false | GetConditionFn} function to determine if the connection is active
 	 */
 	getCondition(moduleGraph) {
 		return getDependencyUsedByExportsCondition(
@@ -125,21 +144,25 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 	 */
 	getReferencedExports(moduleGraph, runtime) {
 		let ids = this.getIds(moduleGraph);
-		if (ids.length === 0) return this._getReferencedExportsInDestructuring();
+		if (ids.length === 0)
+			return this._getReferencedExportsInDestructuring(moduleGraph);
 		let namespaceObjectAsContext = this.namespaceObjectAsContext;
 		if (ids[0] === "default") {
 			const selfModule = moduleGraph.getParentModule(this);
-			const importedModule = moduleGraph.getModule(this);
+			const importedModule =
+				/** @type {Module} */
+				(moduleGraph.getModule(this));
 			switch (
 				importedModule.getExportsType(
 					moduleGraph,
-					selfModule.buildMeta.strictHarmonyModule
+					/** @type {BuildMeta} */
+					(selfModule.buildMeta).strictHarmonyModule
 				)
 			) {
 				case "default-only":
 				case "default-with-named":
 					if (ids.length === 1)
-						return this._getReferencedExportsInDestructuring();
+						return this._getReferencedExportsInDestructuring(moduleGraph);
 					ids = ids.slice(1);
 					namespaceObjectAsContext = true;
 					break;
@@ -157,21 +180,30 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 			ids = ids.slice(0, -1);
 		}
 
-		return this._getReferencedExportsInDestructuring(ids);
+		return this._getReferencedExportsInDestructuring(moduleGraph, ids);
 	}
 
 	/**
+	 * @param {ModuleGraph} moduleGraph module graph
 	 * @param {string[]=} ids ids
 	 * @returns {(string[] | ReferencedExport)[]} referenced exports
 	 */
-	_getReferencedExportsInDestructuring(ids) {
+	_getReferencedExportsInDestructuring(moduleGraph, ids) {
 		if (this.referencedPropertiesInDestructuring) {
 			/** @type {ReferencedExport[]} */
 			const refs = [];
+			const importedModule = moduleGraph.getModule(this);
+			const canMangle =
+				Array.isArray(ids) &&
+				ids.length > 0 &&
+				!moduleGraph
+					.getExportsInfo(importedModule)
+					.getExportInfo(ids[0])
+					.isReexport();
 			for (const key of this.referencedPropertiesInDestructuring) {
 				refs.push({
 					name: ids ? ids.concat([key]) : [key],
-					canMangle: false
+					canMangle
 				});
 			}
 			return refs;
@@ -187,7 +219,10 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 	_getEffectiveExportPresenceLevel(moduleGraph) {
 		if (this.exportPresenceMode !== ExportPresenceModes.AUTO)
 			return this.exportPresenceMode;
-		return moduleGraph.getParentModule(this).buildMeta.strictHarmonyModule
+		const buildMeta = /** @type {BuildMeta} */ (
+			moduleGraph.getParentModule(this).buildMeta
+		);
+		return buildMeta.strictHarmonyModule
 			? ExportPresenceModes.ERROR
 			: ExportPresenceModes.WARN;
 	}
@@ -195,7 +230,7 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 	/**
 	 * Returns warnings
 	 * @param {ModuleGraph} moduleGraph module graph
-	 * @returns {WebpackError[]} warnings
+	 * @returns {WebpackError[] | null | undefined} warnings
 	 */
 	getWarnings(moduleGraph) {
 		const exportsPresence = this._getEffectiveExportPresenceLevel(moduleGraph);
@@ -208,7 +243,7 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 	/**
 	 * Returns errors
 	 * @param {ModuleGraph} moduleGraph module graph
-	 * @returns {WebpackError[]} errors
+	 * @returns {WebpackError[] | null | undefined} errors
 	 */
 	getErrors(moduleGraph) {
 		const exportsPresence = this._getEffectiveExportPresenceLevel(moduleGraph);
@@ -247,6 +282,7 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 		write(this.ids);
 		write(this.name);
 		write(this.range);
+		write(this.idRanges);
 		write(this.exportPresenceMode);
 		write(this.namespaceObjectAsContext);
 		write(this.call);
@@ -266,6 +302,7 @@ class HarmonyImportSpecifierDependency extends HarmonyImportDependency {
 		this.ids = read();
 		this.name = read();
 		this.range = read();
+		this.idRanges = read();
 		this.exportPresenceMode = read();
 		this.namespaceObjectAsContext = read();
 		this.call = read();
@@ -299,13 +336,27 @@ HarmonyImportSpecifierDependency.Template = class HarmonyImportSpecifierDependen
 		// Skip rendering depending when dependency is conditional
 		if (connection && !connection.isTargetActive(runtime)) return;
 
-		const ids = dep.getIds(moduleGraph);
-		const exportExpr = this._getCodeForIds(dep, source, templateContext, ids);
-		const range = dep.range;
+		const {
+			trimmedRange: [trimmedRangeStart, trimmedRangeEnd],
+			trimmedIds
+		} = getTrimmedIdsAndRange(
+			dep.getIds(moduleGraph),
+			dep.range,
+			dep.idRanges,
+			moduleGraph,
+			dep
+		);
+
+		const exportExpr = this._getCodeForIds(
+			dep,
+			source,
+			templateContext,
+			trimmedIds
+		);
 		if (dep.shorthand) {
-			source.insert(range[1], `: ${exportExpr}`);
+			source.insert(trimmedRangeEnd, `: ${exportExpr}`);
 		} else {
-			source.replace(range[0], range[1] - 1, exportExpr);
+			source.replace(trimmedRangeStart, trimmedRangeEnd - 1, exportExpr);
 		}
 	}
 
@@ -357,7 +408,7 @@ HarmonyImportSpecifierDependency.Template = class HarmonyImportSpecifierDependen
 
 			exportExpr = runtimeTemplate.exportFromImport({
 				moduleGraph,
-				module: moduleGraph.getModule(dep),
+				module: /** @type {Module} */ (moduleGraph.getModule(dep)),
 				request: dep.request,
 				exportName: ids,
 				originModule: module,

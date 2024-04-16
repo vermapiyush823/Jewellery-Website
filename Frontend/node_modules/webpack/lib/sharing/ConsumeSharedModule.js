@@ -8,6 +8,9 @@
 const { RawSource } = require("webpack-sources");
 const AsyncDependenciesBlock = require("../AsyncDependenciesBlock");
 const Module = require("../Module");
+const {
+	WEBPACK_MODULE_TYPE_CONSUME_SHARED_MODULE
+} = require("../ModuleTypeConstants");
 const RuntimeGlobals = require("../RuntimeGlobals");
 const makeSerializable = require("../util/makeSerializable");
 const { rangeToString, stringifyHoley } = require("../util/semver");
@@ -22,6 +25,7 @@ const ConsumeSharedFallbackDependency = require("./ConsumeSharedFallbackDependen
 /** @typedef {import("../Module").CodeGenerationResult} CodeGenerationResult */
 /** @typedef {import("../Module").LibIdentOptions} LibIdentOptions */
 /** @typedef {import("../Module").NeedBuildContext} NeedBuildContext */
+/** @typedef {import("../Module").SourceTypes} SourceTypes */
 /** @typedef {import("../RequestShortener")} RequestShortener */
 /** @typedef {import("../ResolverFactory").ResolverWithOptions} ResolverWithOptions */
 /** @typedef {import("../WebpackError")} WebpackError */
@@ -38,7 +42,7 @@ const ConsumeSharedFallbackDependency = require("./ConsumeSharedFallbackDependen
  * @property {string} shareKey global share key
  * @property {string} shareScope share scope
  * @property {SemVerRange | false | undefined} requiredVersion version requirement
- * @property {string} packageName package name to determine required version automatically
+ * @property {string=} packageName package name to determine required version automatically
  * @property {boolean} strictVersion don't use shared version even if version isn't valid
  * @property {boolean} singleton use single global version
  * @property {boolean} eager include the fallback module in a sync way
@@ -52,7 +56,7 @@ class ConsumeSharedModule extends Module {
 	 * @param {ConsumeOptions} options consume options
 	 */
 	constructor(context, options) {
-		super("consume-shared-module", context);
+		super(WEBPACK_MODULE_TYPE_CONSUME_SHARED_MODULE, context);
 		this.options = options;
 	}
 
@@ -69,7 +73,7 @@ class ConsumeSharedModule extends Module {
 			singleton,
 			eager
 		} = this.options;
-		return `consume-shared-module|${shareScope}|${shareKey}|${
+		return `${WEBPACK_MODULE_TYPE_CONSUME_SHARED_MODULE}|${shareScope}|${shareKey}|${
 			requiredVersion && rangeToString(requiredVersion)
 		}|${strictVersion}|${importResolved}|${singleton}|${eager}`;
 	}
@@ -144,7 +148,7 @@ class ConsumeSharedModule extends Module {
 	}
 
 	/**
-	 * @returns {Set<string>} types available (do not mutate)
+	 * @returns {SourceTypes} types available (do not mutate)
 	 */
 	getSourceTypes() {
 		return TYPES;

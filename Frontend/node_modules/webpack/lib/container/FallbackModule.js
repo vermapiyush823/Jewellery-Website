@@ -7,6 +7,7 @@
 
 const { RawSource } = require("webpack-sources");
 const Module = require("../Module");
+const { WEBPACK_MODULE_TYPE_FALLBACK } = require("../ModuleTypeConstants");
 const RuntimeGlobals = require("../RuntimeGlobals");
 const Template = require("../Template");
 const makeSerializable = require("../util/makeSerializable");
@@ -21,6 +22,7 @@ const FallbackItemDependency = require("./FallbackItemDependency");
 /** @typedef {import("../Module").CodeGenerationResult} CodeGenerationResult */
 /** @typedef {import("../Module").LibIdentOptions} LibIdentOptions */
 /** @typedef {import("../Module").NeedBuildContext} NeedBuildContext */
+/** @typedef {import("../Module").SourceTypes} SourceTypes */
 /** @typedef {import("../RequestShortener")} RequestShortener */
 /** @typedef {import("../ResolverFactory").ResolverWithOptions} ResolverWithOptions */
 /** @typedef {import("../WebpackError")} WebpackError */
@@ -37,7 +39,7 @@ class FallbackModule extends Module {
 	 * @param {string[]} requests list of requests to choose one
 	 */
 	constructor(requests) {
-		super("fallback-module");
+		super(WEBPACK_MODULE_TYPE_FALLBACK);
 		this.requests = requests;
 		this._identifier = `fallback ${this.requests.join(" ")}`;
 	}
@@ -115,7 +117,7 @@ class FallbackModule extends Module {
 	}
 
 	/**
-	 * @returns {Set<string>} types available (do not mutate)
+	 * @returns {SourceTypes} types available (do not mutate)
 	 */
 	getSourceTypes() {
 		return TYPES;
@@ -127,7 +129,7 @@ class FallbackModule extends Module {
 	 */
 	codeGeneration({ runtimeTemplate, moduleGraph, chunkGraph }) {
 		const ids = this.dependencies.map(dep =>
-			chunkGraph.getModuleId(moduleGraph.getModule(dep))
+			chunkGraph.getModuleId(/** @type {Module} */ (moduleGraph.getModule(dep)))
 		);
 		const code = Template.asString([
 			`var ids = ${JSON.stringify(ids)};`,
@@ -135,7 +137,7 @@ class FallbackModule extends Module {
 			`var loop = ${runtimeTemplate.basicFunction("next", [
 				"while(i < ids.length) {",
 				Template.indent([
-					"try { next = __webpack_require__(ids[i++]); } catch(e) { return handleError(e); }",
+					`try { next = ${RuntimeGlobals.require}(ids[i++]); } catch(e) { return handleError(e); }`,
 					"if(next) return next.then ? next.then(handleResult, handleError) : handleResult(next);"
 				]),
 				"}",
@@ -165,6 +167,10 @@ class FallbackModule extends Module {
 		super.serialize(context);
 	}
 
+	/**
+	 * @param {ObjectDeserializerContext} context context
+	 * @returns {FallbackModule} deserialized fallback module
+	 */
 	static deserialize(context) {
 		const { read } = context;
 		const obj = new FallbackModule(read());

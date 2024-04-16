@@ -7,6 +7,7 @@
 
 const { RawSource } = require("webpack-sources");
 const Module = require("../Module");
+const { WEBPACK_MODULE_TYPE_REMOTE } = require("../ModuleTypeConstants");
 const RuntimeGlobals = require("../RuntimeGlobals");
 const makeSerializable = require("../util/makeSerializable");
 const FallbackDependency = require("./FallbackDependency");
@@ -20,6 +21,7 @@ const RemoteToExternalDependency = require("./RemoteToExternalDependency");
 /** @typedef {import("../Module").CodeGenerationResult} CodeGenerationResult */
 /** @typedef {import("../Module").LibIdentOptions} LibIdentOptions */
 /** @typedef {import("../Module").NeedBuildContext} NeedBuildContext */
+/** @typedef {import("../Module").SourceTypes} SourceTypes */
 /** @typedef {import("../RequestShortener")} RequestShortener */
 /** @typedef {import("../ResolverFactory").ResolverWithOptions} ResolverWithOptions */
 /** @typedef {import("../WebpackError")} WebpackError */
@@ -39,7 +41,7 @@ class RemoteModule extends Module {
 	 * @param {string} shareScope the used share scope name
 	 */
 	constructor(request, externalRequests, internalRequest, shareScope) {
-		super("remote-module");
+		super(WEBPACK_MODULE_TYPE_REMOTE);
 		this.request = request;
 		this.externalRequests = externalRequests;
 		this.internalRequest = internalRequest;
@@ -118,7 +120,7 @@ class RemoteModule extends Module {
 	}
 
 	/**
-	 * @returns {Set<string>} types available (do not mutate)
+	 * @returns {SourceTypes} types available (do not mutate)
 	 */
 	getSourceTypes() {
 		return TYPES;
@@ -163,6 +165,10 @@ class RemoteModule extends Module {
 		super.serialize(context);
 	}
 
+	/**
+	 * @param {ObjectDeserializerContext} context context
+	 * @returns {RemoteModule} deserialized module
+	 */
 	static deserialize(context) {
 		const { read } = context;
 		const obj = new RemoteModule(read(), read(), read(), read());
