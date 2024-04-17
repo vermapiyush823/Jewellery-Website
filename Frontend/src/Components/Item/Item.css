@@ -1,5 +1,6 @@
 .item {
   width: 280px;
+  margin: 0%;
 }
 
 .item img {
@@ -10,6 +11,9 @@
 
 .item p {
   margin: 6px 0px;
+  color: #656056;
+  font-size: 18px;
+  font-weight: 500;
 }
 .item-prices {
   display: flex;
