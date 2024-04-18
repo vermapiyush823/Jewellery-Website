@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { BiCart } from "react-icons/bi";
 import { Link } from "react-router-dom";
+import { ShopContext } from "../../Context/ShopContext";
 import logo from "../Assets/logo.png";
 import "./Navbar.css";
 const Navbar = () => {
   const [menu, setMenu] = useState("shop");
+  const { getTotalCartItems } = useContext(ShopContext);
   return (
     <div className="navbar">
       <div className="nav-logo">
@@ -59,8 +61,10 @@ const Navbar = () => {
         <Link className="nav-login-btn" to="/login">
           Login
         </Link>
-        <BiCart className="nav-cart-icon" />
-        <div className="nav-cart-count">0</div>
+        <Link to="/cart">
+          <div className="nav-cart-count">{getTotalCartItems()}</div>
+          <BiCart className="nav-cart-icon" />
+        </Link>
       </div>
     </div>
   );
