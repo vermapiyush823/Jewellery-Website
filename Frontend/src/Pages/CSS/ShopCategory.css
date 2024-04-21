@@ -3,6 +3,13 @@
   margin: 30px auto;
   width: 82%;
 }
+.shop-category h1 {
+  font-size: 80px;
+  text-transform: capitalize;
+  font-weight: 600;
+  margin: 0 170px;
+  text-align: center;
+}
 .shopcategory-indexSort {
   display: flex;
   justify-content: space-between;

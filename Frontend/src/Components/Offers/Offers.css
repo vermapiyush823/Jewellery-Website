@@ -27,13 +27,13 @@
 .offers-left button {
   width: 282px;
   height: 70px;
-  border-radius: 35px;
-  background: #ff4141;
-  border: none;
+  margin-top: 10px;
+  background-color: #171717;
   color: white;
-  font-size: 22px;
+  font-size: 30px;
   font-weight: 500;
-  margin-top: 30px;
+  border: none;
+  border-radius: 15px;
   cursor: pointer;
 }
 .offers-right {

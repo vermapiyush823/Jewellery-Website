@@ -16,13 +16,55 @@ const ShopContextProvider = (props) => {
       .then((data) => {
         setAll_product(data);
       });
+    if (localStorage.getItem("auth-token")) {
+      fetch("http://localhost:4000/getcart", {
+        method: "POST",
+        headers: {
+          Accept: "application/form-data",
+          "Content-Type": "application/json",
+          "auth-token": `${localStorage.getItem("auth-token")}`,
+        },
+        body: "",
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          setCartItems(data);
+        });
+    }
   }, []);
-  const addToCart = (id) => {
-    setCartItems((prev) => ({ ...prev, [id]: prev[id] + 1 }));
-    console.log(cartItems);
+  const addToCart = (ItemId) => {
+    setCartItems((prev) => ({ ...prev, [ItemId]: prev[ItemId] + 1 }));
+    if (localStorage.getItem("auth-token")) {
+      fetch("http://localhost:4000/addtocart", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "auth-token": `${localStorage.getItem("auth-token")}`,
+        },
+        body: JSON.stringify({ id: ItemId }),
+      })
+        .then((response) => response.json())
+        .then((data) => console.log(data));
+    }
   };
-  const removeFromCart = (id) => {
-    setCartItems((prev) => ({ ...prev, [id]: prev[id] - 1 }));
+  const removeFromCart = (itemId) => {
+    setCartItems((prev) => ({ ...prev, [itemId]: prev[itemId] - 1 }));
+    if (localStorage.getItem("auth-token")) {
+      fetch("http://localhost:4000/removefromcart", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "auth-token": `${localStorage.getItem("auth-token")}`,
+        },
+        body: JSON.stringify({
+          id: itemId,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => console.log(data));
+    }
   };
   const getTotalCartItems = () => {
     let sum = 0;
