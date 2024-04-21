@@ -113,7 +113,10 @@ app.post("/addproduct", async (req, res) => {
   });
   try {
     const product = await newProduct.save();
-    res.status(201).json(product);
+    res.status(201).json({
+      success: 1,
+      message: "Product added successfully",
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -140,14 +143,90 @@ app.get("/allproducts", async (req, res) => {
   }
 });
 
-app.get("/product/:id", async (req, res) => {
-  const id = req.params.id;
-  try {
-    const product = await Product.findOne({ id: id });
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+// creating user schema
+const Users = mongoose.model("Users", {
+  name: {
+    type: String,
+  },
+  email: {
+    type: String,
+    unique: true,
+  },
+  password: {
+    type: String,
+  },
+  cartData: {
+    type: Object,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// creating endpoint for user registration
+app.post("/signup", async (req, res) => {
+  let check = await Users.findOne({ email: req.body.email });
+  if (check) {
+    res.status(400).json({
+      success: false,
+      errors: "User already exists",
+    });
+
+    return;
   }
+  let cart = {};
+  for (let i = 0; i < 300; i++) {
+    cart[i] = 0;
+  }
+  const user = new Users({
+    name: req.body.usermame,
+    email: req.body.email,
+    password: req.body.password,
+    cartData: cart,
+  });
+  await user.save();
+  const data = {
+    user: {
+      id: user.id,
+    },
+  };
+  const token = jwt.sign(data, "secret_ecom");
+  res.json({ success: true, token });
+});
+
+// creating endpoint for user login
+app.post("/login", async (req, res) => {
+  let user = await Users.findOne({ email: req.body.email });
+  if (!user) {
+    res.status(400).json({
+      success: false,
+      errors: "Email does not exist",
+    });
+    return;
+  }
+  if (user.password === req.body.password) {
+    const data = {
+      user: {
+        id: user.id,
+      },
+    };
+    const token = jwt.sign(data, "secret_ecom");
+    res.json({ success: true, token });
+  } else {
+    res.status(400).json({
+      success: false,
+      errors: "Invalid credentials",
+    });
+  }
+});
+
+// Creating end point for new collection data
+app.get("/newcollections", async (req, res) => {
+  let products = await Product.find({});
+  let newcollection = products.slice(1, -8);
+  console.log("New Collection Fetched");
+  res.send(newcollection);
 });
 
 app.listen(port, (error) => {
