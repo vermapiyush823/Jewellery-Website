@@ -10,10 +10,12 @@ const ShopCategory = (props) => {
     <div className="shop-category">
       <h1>{props.category} Collections</h1>
       <div className="shopcategory-indexSort">
-        <p>
-          <span>Showing 1-12</span> out of 36 products
-        </p>
-        <div className="shopcategory-sort">
+        <div
+          className="shopcategory-sort"
+          onClick={() => {
+            all_product.sort((a, b) => a.new_price - b.new_price);
+          }}
+        >
           Sort by <img src={dropdown_icon} alt="" />
         </div>
       </div>

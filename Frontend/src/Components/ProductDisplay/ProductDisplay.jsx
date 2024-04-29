@@ -37,7 +37,7 @@ const ProductDisplay = (props) => {
           <p>{product.description}</p>
         </div>
         <div className="productdisplay-right-weight">
-          <p>Weight: {product.weight}</p>
+          <p>Weight: {product.weight} gm</p>
         </div>
         <button
           onClick={() => {
