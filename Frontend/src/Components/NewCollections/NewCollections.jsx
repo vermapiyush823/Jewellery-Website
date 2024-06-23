@@ -5,10 +5,11 @@ import "./NewCollections.css";
 const NewCollections = () => {
   const [new_collection, setNew_collection] = useState([]);
   useEffect(() => {
-    fetch("http://localhost:4000/newcollections").then((response) =>
-      response.json().then((data) => {
-        setNew_collection(data);
-      })
+    fetch("http://localhost:4000/api/products/newcollections").then(
+      (response) =>
+        response.json().then((data) => {
+          setNew_collection(data);
+        })
     );
   }, []);
   return (

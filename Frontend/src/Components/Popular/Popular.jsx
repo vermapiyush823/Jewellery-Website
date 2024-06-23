@@ -4,7 +4,7 @@ import "./Popular.css";
 const Popular = () => {
   const [data_product, setData_product] = useState([]);
   useEffect(() => {
-    fetch("http://localhost:4000/popular").then((response) =>
+    fetch("http://localhost:4000/api/products/popular").then((response) =>
       response.json().then((data) => {
         setData_product(data);
       })
