@@ -1,5 +1,5 @@
 import React from "react";
-import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
+// import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import footer_logo from "../Assets/logo.png";
 import "./Footer.css";
 const Footer = () => {
@@ -17,7 +17,7 @@ const Footer = () => {
         <li>Contact</li>
       </ul>
       <div className="footer-social-icon">
-        <div className="footer-icons-container">
+        {/* <div className="footer-icons-container">
           <FaFacebookF className="footer-icon" />
         </div>
         <div className="footer-icons-container">
@@ -28,7 +28,7 @@ const Footer = () => {
         </div>
         <div className="footer-icons-container">
           <FaYoutube className="footer-icon" />
-        </div>
+        </div> */}
       </div>
       <div className="footer-copyright">
         <hr />
