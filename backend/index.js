@@ -92,7 +92,7 @@ const Product = mongoose.model("Product", {
 });
 
 // Creating api for adding product
-app.post("/addproduct", async (req, res) => {
+app.post("api/products/add", async (req, res) => {
   let products = await Product.find({});
   let id;
   if (products.length > 0) {
@@ -123,7 +123,7 @@ app.post("/addproduct", async (req, res) => {
 });
 
 // Creating api for removing product
-app.post("/removeproduct", async (req, res) => {
+app.post("api/products/remove", async (req, res) => {
   const id = req.body.id;
   try {
     const product = await Product.findOneAndDelete({ id: id });
@@ -134,7 +134,7 @@ app.post("/removeproduct", async (req, res) => {
 });
 
 // Creating api for getting all products
-app.get("/allproducts", async (req, res) => {
+app.get("/api/products/all", async (req, res) => {
   try {
     const products = await Product.find({});
     res.status(200).json(products);
@@ -165,7 +165,7 @@ const Users = mongoose.model("Users", {
 });
 
 // creating endpoint for user registration
-app.post("/signup", async (req, res) => {
+app.post("api/users/signup", async (req, res) => {
   let check = await Users.findOne({ email: req.body.email });
   if (check) {
     res.status(400).json({
@@ -196,7 +196,7 @@ app.post("/signup", async (req, res) => {
 });
 
 // creating endpoint for user login
-app.post("/login", async (req, res) => {
+app.post("api/users/login", async (req, res) => {
   let user = await Users.findOne({ email: req.body.email });
   if (!user) {
     res.status(400).json({
@@ -222,7 +222,7 @@ app.post("/login", async (req, res) => {
 });
 
 // Creating end point for new collection data
-app.get("/newcollections", async (req, res) => {
+app.get("api/products/newcollections", async (req, res) => {
   let products = await Product.find({});
   let newcollection = products.slice(0, -10);
   console.log("New Collection Fetched");
@@ -230,7 +230,7 @@ app.get("/newcollections", async (req, res) => {
 });
 
 // creating endpoint for popular in women category
-app.get("/popular", async (req, res) => {
+app.get("api/products/popular", async (req, res) => {
   let products = await Product.find({
     category: "women",
   });
@@ -256,7 +256,7 @@ const fetchUser = (req, res, next) => {
 };
 
 // creating endpoint for adding product to cartdata
-app.post("/addtocart", fetchUser, async (req, res) => {
+app.post("api/products/add", fetchUser, async (req, res) => {
   let userData = await Users.findOne({ _id: req.user.id });
   userData.cartData[req.body.id] += 1;
   await Users.findOneAndUpdate(
@@ -270,7 +270,7 @@ app.post("/addtocart", fetchUser, async (req, res) => {
   });
 });
 // creating endpoint for removing product from cartdata
-app.post("/removefromcart", fetchUser, async (req, res) => {
+app.post("api/users/remove", fetchUser, async (req, res) => {
   let userData = await Users.findOne({ _id: req.user.id });
   if (userData.cartData[req.body.id] > 0) {
     userData.cartData[req.body.id] -= 1;
@@ -287,7 +287,7 @@ app.post("/removefromcart", fetchUser, async (req, res) => {
 });
 
 // creating endpoint for fetching cartdata
-app.post("/getcart", fetchUser, fetchUser, async (req, res) => {
+app.post("api/users/get", fetchUser, fetchUser, async (req, res) => {
   console.log("Get Cart");
   let userData = await Users.findOne({ _id: req.user.id });
   res.json(userData.cartData);
